@@ -24,8 +24,6 @@ while (!feof($file)) {
 
 fclose($file);
 
-# var_dump($spaces);
-
 //get domains
 
 $domainsperspace = array();
@@ -54,14 +52,10 @@ foreach($spaces as $space) {
   }
 }
 
-# var_dump($domainsperspace);
-# var_dump($spaceperdomain);
-
 function getUserDataFromInput($input) {
   global $spaces, $domainsperspace, $spaceperdomain;
   $input = trim($input);
-  // var_dump($input);
-  //var_dump($spaces["origami"]);
+
   // is username
   if(isset($spaces[$input])) {
     $user = $input;
