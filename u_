@@ -116,7 +116,25 @@ function getSSHcreds($input) {
   print '   - '.$user['ssh']."\n"  ;
 }
 
-if ($argc < 3) {
+function getQuota($input) {
+  global $spaces, $domainsperspace, $spaceperdomain;
+  $user = getUserDataFromInput($input);
+  print "\n\n".'Quota für den Uberspace '.$user[ssh].' werden abgerufen:'."\n";
+  $quota = shell_exec('ssh '.$user['ssh'].' quota -gsl | grep -v "^Disk quotas"');
+
+  print($quota);
+}
+
+function getPHP($input) {
+  global $spaces, $domainsperspace, $spaceperdomain;
+  print "\n\n".'PHP-Version alle Uberspaces:'."\n";
+  foreach ($spaces as $key => $user) {
+    $version = shell_exec('ssh '.$user['ssh'].' php -v | grep "^PHP "');
+    print(str_pad($user['user'], 8).': '.$version);
+  }
+}
+
+function help($additionaltext = "") {
   $str = <<<EOF
 
 Usage: ./u_ <command> [<uberspaceid>]
@@ -128,6 +146,8 @@ Commands:
   domains     Gets all domains of an specified uberspaceid.
   ssh         Gives the SSH connection for a specified
               uberspaceid.
+  quota       Returns the current quota for the uberspaceid.
+  php         Returns the current PHP version for every uberspace.
 
 UberspaceID:
   The Uberspace is identified by one of the following:
@@ -138,8 +158,23 @@ UberspaceID:
 See readme.md for more information.
 
 EOF;
-  print $str;
-} else {
+  $additionaltext = ($additionaltext=="") ? "" : $additionaltext."\n";
+  print ($additionaltext.$str);
+}
+
+if ($argc == 2) {
+  switch($argv[1]) {
+    case 'help':
+      help();
+      break;
+    case 'php':
+      getPHP();
+      break;
+    default:
+      help('Command not found.');
+      break;
+  }
+} elseif ($argc == 3) {
   switch($argv[1]) {
     case 'mysql':
       getMySQLdata($argv[2]);
@@ -150,7 +185,15 @@ EOF;
     case 'ssh':
       getSSHcreds($argv[2]);
       break;
+    case 'quota':
+      getQuota($argv[2]);
+      break;
+    default:
+      help('Command not found.');
+      break;
   }
+} else {
+  help();
 }
 
 
