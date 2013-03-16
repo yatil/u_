@@ -1,0 +1,158 @@
+#!/usr/bin/php
+<?php
+
+function startsWith($haystack, $needle)
+{
+    return !strncmp($haystack, $needle, strlen($needle));
+}
+
+$file = fopen("uberspaces.txt", "r");
+$spaces = array();
+
+while (!feof($file)) {
+  $creds = array();
+  $line = trim(fgets($file));
+  if (!(startsWith($line, '#') OR ($line == ''))) {
+    $creds = explode('@', $line);
+    $spaces[$creds[0]] = array(
+      'user' => $creds[0],
+      'server' => $creds[1],
+      'ssh' => $line
+    );
+  }
+}
+
+fclose($file);
+
+# var_dump($spaces);
+
+//get domains
+
+$domainsperspace = array();
+$spaceperdomain = array();
+
+foreach($spaces as $space) {
+  // Standard Uberspace URLs
+  $domainsperspace[$space['user']][] = $space['user'].'.'.$space['server'];
+  $spaceperdomain[$space['user'].'.'.$space['server']] = $space['user'];
+
+
+  // Custom domain names
+  $filename = "domains/".$space['user'].".txt";
+  if(file_exists($filename)) {
+    $file = fopen($filename, "r");
+
+    while (!feof($file)) {
+      $line = trim(fgets($file));
+      if (!(startsWith($line, '#') OR ($line == ''))) {
+        $domainsperspace[$space['user']][] = $line;
+        $spaceperdomain[$line] = $space['user'];
+      }
+    }
+
+    fclose($file);
+  }
+}
+
+# var_dump($domainsperspace);
+# var_dump($spaceperdomain);
+
+function getUserDataFromInput($input) {
+  global $spaces, $domainsperspace, $spaceperdomain;
+  $input = trim($input);
+  // var_dump($input);
+  //var_dump($spaces["origami"]);
+  // is username
+  if(isset($spaces[$input])) {
+    $user = $input;
+    return $spaces[$user];
+  } elseif(isset($spaceperdomain[$input])) {
+    // is domain
+    $user = $spaceperdomain[$input];
+    return $spaces[$user];
+  } elseif(strpos($input, '@')) {
+    // is ssh handle
+    $creds = explode("@", $input);
+    $user = $spaces[$creds[0]];
+    return $user;
+  } else {
+    die('Uberspace not found.'."\n");
+    return false;
+  }
+}
+
+function getMySQLdata($input) {
+  global $spaces, $domainsperspace, $spaceperdomain;
+  $user = getUserDataFromInput($input);
+  print "\n\n".'SQL-Daten für den Uberspace '.$user[ssh].' werden abgerufen:'."\n";
+  $mysqlfile = shell_exec('ssh '.$user['ssh'].' cat .my.cnf');
+  $mysqllinesraw = explode("\n", $mysqlfile);
+  foreach ($mysqllinesraw as $line) {
+    if (!(startsWith($line, '#') OR startsWith($line, '[') OR (trim($line == '')))) {
+      $linetokens = explode("=", $line);
+      $mysqllines[$linetokens[0]] = $linetokens[1];
+    }
+  }
+
+  print('User:     '.$mysqllines['user']."\n");
+  print('Password: '.$mysqllines['password']."\n");
+  print('Socket:   '.$mysqllines['socket']."\n");
+  print('Port:     '.$mysqllines['port']."\n");
+}
+
+function getDomainList($input) {
+  global $spaces, $domainsperspace, $spaceperdomain;
+  $user = getUserDataFromInput($input);
+  print "\n\n".'Domains für den Uberspace '.$user['ssh'].':'."\n";
+  foreach ($domainsperspace[$user['user']] as $domain) {
+    print '   - '.$domain."\n";
+  }
+}
+
+function getSSHcreds($input) {
+  global $spaces, $domainsperspace, $spaceperdomain;
+  $user = getUserDataFromInput($input);
+  print "\n\n".'SSH-Zugang für den Uberspace '.$user['user'].':'."\n";
+  print '   - '.$user['ssh']."\n"  ;
+}
+
+if ($argc < 3) {
+  $str = <<<EOF
+
+Usage: ./u_ <command> [<uberspaceid>]
+
+Commands:
+  mysql       Returns the mysql data. A ssh connection will be
+              established, and the contents of .my.cnf will be
+              retrieved. Needs uberspaceid.
+  domains     Gets all domains of an specified uberspaceid.
+  ssh         Gives the SSH connection for a specified
+              uberspaceid.
+
+UberspaceID:
+  The Uberspace is identified by one of the following:
+  -  The Uberspace username.
+  -  A domain that is registered to that uberspace.
+  -  The complete ssh login information username@server.uberspace.de
+
+See readme.md for more information.
+
+EOF;
+  print $str;
+} else {
+  switch($argv[1]) {
+    case 'mysql':
+      getMySQLdata($argv[2]);
+      break;
+    case 'domains':
+      getDomainList($argv[2]);
+      break;
+    case 'ssh':
+      getSSHcreds($argv[2]);
+      break;
+  }
+}
+
+
+print "\n\n";
+?>

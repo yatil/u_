@@ -1,0 +1,6 @@
+my-site1.com
+my-site2.com
+my-site3.com
+my-site1.de
+my-site2.de
+my-site3.de

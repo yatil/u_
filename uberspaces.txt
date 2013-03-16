@@ -1,0 +1,8 @@
+# Mine:
+uberspace1@scorpius.uberspace.de
+uberspace2@hydra.uberspace.de
+
+# Clients:
+client1@aquarius.uberspace.de
+client2@perseus.uberspace.de
+client3@monoceres.uberspace.de
